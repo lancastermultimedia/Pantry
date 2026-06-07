@@ -1,0 +1,11 @@
+# Environment variables — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+npm-debug.log*
+
+# macOS
+.DS_Store

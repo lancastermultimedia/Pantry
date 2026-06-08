@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
+const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
 const scrapeRouter = require('./routes/scrape')
 
@@ -13,11 +14,14 @@ const allowedOrigins = [
   ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : []),
 ]
 
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}))
 app.use(cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST'],
 }))
-app.use(express.json())
+app.use(express.json({ limit: '50kb' }))
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -30,7 +34,7 @@ const limiter = rateLimit({
 app.use('/api', limiter)
 app.use('/api', scrapeRouter)
 
-app.get('/health', (_, res) => res.json({ status: 'ok', service: 'pantry-server' }))
+app.get('/health', limiter, (_, res) => res.json({ status: 'ok', service: 'pantry-server' }))
 
 app.listen(PORT, () => {
   console.log(`Pantry server running on http://localhost:${PORT}`)

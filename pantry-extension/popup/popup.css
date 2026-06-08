@@ -1,0 +1,212 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cream: #FAF7F2;
+  --ink: #1C1C1A;
+  --green: #2D5016;
+  --green-light: #4A7C28;
+  --warm-grey: #8C8478;
+  --border: #E8E2D9;
+  --accent: #C4622D;
+}
+
+body {
+  width: 380px;
+  min-height: 80px;
+  max-height: 580px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Layout ─────────────────────────────── */
+.px { padding: 16px; }
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: white;
+}
+.header-logo {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: var(--green);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.header-logo svg { fill: white; }
+.header-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  flex: 1;
+}
+.header-user {
+  font-size: 11px; color: var(--warm-grey);
+  max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.header-signout {
+  background: none; border: none; cursor: pointer;
+  color: var(--warm-grey); padding: 2px; display: flex; align-items: center;
+}
+.header-signout:hover { color: var(--accent); }
+
+/* ── Typography ─────────────────────────── */
+h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px; font-weight: 700; color: var(--ink);
+  line-height: 1.2;
+}
+h2 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 15px; font-weight: 700; color: var(--ink);
+}
+.label {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--warm-grey);
+  display: block; margin-bottom: 6px;
+}
+.muted { color: var(--warm-grey); }
+.error-text { color: var(--accent); font-size: 12px; margin-top: 4px; }
+
+/* ── Inputs ─────────────────────────────── */
+input[type="text"], input[type="email"] {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  background: white; color: var(--ink); font-size: 13px;
+  font-family: 'DM Sans', sans-serif; outline: none;
+  transition: border-color 0.15s;
+}
+input:focus { border-color: var(--green-light); }
+
+/* ── Buttons ─────────────────────────────── */
+.btn {
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 9px 14px; border-radius: 10px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  border: none; transition: background 0.15s, opacity 0.15s;
+  font-family: 'DM Sans', sans-serif;
+  text-decoration: none;
+}
+.btn:disabled { opacity: 0.45; pointer-events: none; }
+.btn-primary { background: var(--green); color: white; width: 100%; }
+.btn-primary:hover { background: var(--green-light); }
+.btn-secondary {
+  background: transparent; color: var(--ink);
+  border: 1.5px solid var(--border); width: 100%;
+}
+.btn-secondary:hover { background: var(--border); }
+.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+.btn-link {
+  background: none; border: none; color: var(--green); cursor: pointer;
+  font-size: 12px; text-decoration: underline; padding: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Recipe card ─────────────────────────── */
+.recipe-card {
+  background: white; border-radius: 12px;
+  border: 1px solid var(--border); overflow: hidden;
+}
+.recipe-thumb {
+  width: 100%; height: 120px; object-fit: cover; display: block;
+}
+.recipe-thumb-placeholder {
+  width: 100%; height: 90px; background: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.recipe-info { padding: 10px 12px; }
+.recipe-title { font-weight: 600; font-size: 13px; line-height: 1.3; margin-bottom: 4px; }
+.recipe-meta { display: flex; gap: 12px; color: var(--warm-grey); font-size: 11px; }
+
+/* ── Pill group (days / meals) ───────────── */
+.pill-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.pill {
+  padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 500;
+  border: 1.5px solid var(--border); background: white; color: var(--warm-grey);
+  cursor: pointer; transition: all 0.12s;
+}
+.pill:hover { border-color: var(--green); color: var(--green); }
+.pill.active { background: var(--green); border-color: var(--green); color: white; font-weight: 600; }
+
+/* ── Segmented control (week) ────────────── */
+.seg-ctrl { display: flex; background: var(--border); padding: 3px; border-radius: 9px; gap: 2px; }
+.seg-btn {
+  flex: 1; padding: 5px 10px; border-radius: 7px; border: none;
+  font-size: 11px; font-weight: 600; cursor: pointer; background: transparent;
+  color: var(--warm-grey); transition: all 0.12s; font-family: 'DM Sans', sans-serif;
+}
+.seg-btn.active { background: white; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* ── Select ──────────────────────────────── */
+select {
+  width: 100%; padding: 8px 12px; border: 1.5px solid var(--border);
+  border-radius: 10px; background: white; color: var(--ink); font-size: 12px;
+  font-family: 'DM Sans', sans-serif; outline: none; cursor: pointer;
+}
+select:focus { border-color: var(--green-light); }
+
+/* ── Divider ─────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+/* ── Section ─────────────────────────────── */
+.section { padding: 14px 16px; }
+.section + .section { border-top: 1px solid var(--border); }
+
+/* ── Search results ──────────────────────── */
+.search-result {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 8px; cursor: pointer;
+  text-decoration: none; color: var(--ink);
+}
+.search-result:hover { background: var(--border); }
+.search-thumb {
+  width: 36px; height: 36px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
+}
+.search-thumb-placeholder {
+  width: 36px; height: 36px; border-radius: 6px; background: var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+}
+.search-title { font-size: 12px; font-weight: 500; line-height: 1.3; }
+.search-meta { font-size: 10px; color: var(--warm-grey); }
+
+/* ── Loading skeleton ────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -300px 0; }
+  100% { background-position: 300px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #ede8e0 25%, #f5f1ec 50%, #ede8e0 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 8px;
+}
+.sk-line { height: 12px; margin-bottom: 8px; }
+.sk-thumb { height: 90px; border-radius: 10px; margin-bottom: 10px; }
+
+/* ── Success ──────────────────────────────── */
+.success-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--green); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; margin: 0 auto 12px;
+}
+
+/* ── Collapsible ─────────────────────────── */
+.collapsible-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; user-select: none;
+}
+.collapsible-trigger .chevron { font-size: 10px; color: var(--warm-grey); transition: transform 0.15s; }
+.collapsible-trigger.open .chevron { transform: rotate(180deg); }
+.collapsible-body { display: none; margin-top: 10px; }
+.collapsible-body.open { display: block; }
+
+/* ── No recipe state ─────────────────────── */
+.empty-icon { font-size: 32px; text-align: center; margin-bottom: 8px; }

@@ -95,9 +95,11 @@ export const useSocialStore = create((set, get) => ({
       set((s) => ({ profile: { ...s.profile, ...updates } }))
       return
     }
+    // Always include email so the INSERT path never violates NOT NULL
+    const { data: { user: authUser } } = await supabase.auth.getUser()
     const { data, error } = await supabase
       .from('profiles')
-      .upsert({ id: userId, ...updates })
+      .upsert({ id: userId, email: authUser?.email ?? '', ...updates })
       .select()
       .single()
     if (error) throw error

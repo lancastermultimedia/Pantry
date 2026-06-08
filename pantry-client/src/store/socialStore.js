@@ -116,9 +116,7 @@ export const useSocialStore = create((set, get) => ({
     })
     if (error) throw new Error(`Storage: ${error.message}`)
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
-    const url = data.publicUrl
-    await get().upsertProfile(userId, { avatar_url: url })
-    return url
+    return data.publicUrl
   },
 
   // ── Search ───────────────────────────────────────────────────

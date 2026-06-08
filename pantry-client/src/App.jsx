@@ -1,44 +1,76 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, NavLink } from 'react-router-dom'
-import { CalendarDays, BookOpen, ShoppingCart, Leaf, LogOut, User } from 'lucide-react'
+import { CalendarDays, BookOpen, ShoppingCart, Leaf, LogOut, Settings, Users, Calendar } from 'lucide-react'
 
 import { AuthProvider, useAuth } from './lib/auth'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { useMealPlanStore } from './store/mealPlanStore'
+import { useSocialStore } from './store/socialStore'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { OnboardingTour } from './components/ui/OnboardingTour'
+import { NotificationBell } from './components/social/NotificationBell'
+import { ProfileSetup } from './components/auth/ProfileSetup'
 
 import { Planner } from './pages/Planner'
 import { Recipe } from './pages/Recipe'
 import { Recipes } from './pages/Recipes'
 import { Shopping } from './pages/Shopping'
 import { Login } from './pages/Login'
+import People from './pages/People'
+import Settings_ from './pages/Settings'
+import Shared from './pages/Shared'
+import SharedCalendar from './pages/SharedCalendar'
 
 function UserMenu() {
   const { user, signOut, isConfigured } = useAuth()
+  const { profile } = useSocialStore()
+  const [open, setOpen] = useState(false)
 
   if (!isConfigured || !user) return null
 
-  const initials = user.email?.slice(0, 2).toUpperCase() ?? 'U'
-  const displayEmail = user.email ?? ''
+  const displayName = profile?.display_name ?? user.email?.split('@')[0] ?? 'U'
+  const avatarUrl = profile?.avatar_url ?? null
+  const initials = displayName.slice(0, 2).toUpperCase()
 
   return (
-    <div className="relative ml-auto flex items-center gap-2">
-      <div className="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-[var(--pantry-border)] transition-colors group">
-        <div className="w-7 h-7 rounded-full bg-[var(--pantry-green)] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-          {initials}
-        </div>
-        <span className="text-xs text-[var(--pantry-warm-grey)] max-w-[120px] truncate hidden sm:block">
-          {displayEmail}
-        </span>
-      </div>
+    <div className="relative ml-2">
       <button
-        onClick={signOut}
-        title="Sign out"
-        className="p-1.5 rounded-lg text-[var(--pantry-warm-grey)] hover:text-[var(--pantry-accent)] hover:bg-[var(--pantry-border)] transition-colors"
+        onClick={() => setOpen((v) => !v)}
+        className="w-7 h-7 rounded-full overflow-hidden bg-[var(--pantry-green)] flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 hover:ring-2 hover:ring-[var(--pantry-green-light)] transition-all"
       >
-        <LogOut size={15} />
+        {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initials}
       </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-9 w-44 bg-white rounded-xl shadow-lg border border-[var(--pantry-border)] py-1 z-50">
+            <div className="px-4 py-2 border-b border-[var(--pantry-border)]">
+              <p className="text-xs font-semibold text-[var(--pantry-ink)] truncate">{displayName}</p>
+              <p className="text-[10px] text-[var(--pantry-warm-grey)] truncate">{user.email}</p>
+            </div>
+            <NavLink
+              to="/settings"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--pantry-ink)] hover:bg-[var(--pantry-cream)]"
+            >
+              <Settings size={13} /> Settings
+            </NavLink>
+            <NavLink
+              to="/people"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--pantry-ink)] hover:bg-[var(--pantry-cream)]"
+            >
+              <Users size={13} /> People
+            </NavLink>
+            <button
+              onClick={() => { setOpen(false); signOut() }}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-[var(--pantry-warm-grey)] hover:bg-[var(--pantry-cream)]"
+            >
+              <LogOut size={13} /> Sign out
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -51,11 +83,34 @@ function WeekInitializer() {
     if (user) {
       initWeek(user.id, weekStart)
     }
-    // Only run when the user or week changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, weekStart])
 
   return null
+}
+
+function ProfileSetupGate({ children }) {
+  const { user, isConfigured } = useAuth()
+  const { profile, loadProfile, profileLoading } = useSocialStore()
+  const [checked, setChecked] = useState(false)
+
+  useEffect(() => {
+    async function check() {
+      if (user?.id && isConfigured) {
+        await loadProfile(user.id)
+      }
+      setChecked(true)
+    }
+    check()
+  }, [user?.id])
+
+  if (!checked || profileLoading) return null
+
+  if (isConfigured && user && profile && !profile.display_name) {
+    return <ProfileSetup userId={user.id} onComplete={() => loadProfile(user.id)} />
+  }
+
+  return children
 }
 
 function AppShell({ children }) {
@@ -83,6 +138,7 @@ function AppShell({ children }) {
             { to: '/planner', icon: CalendarDays, label: 'Planner' },
             { to: '/recipes', icon: BookOpen, label: 'Recipes' },
             { to: '/shopping', icon: ShoppingCart, label: 'Shopping' },
+            { to: '/shared', icon: Calendar, label: 'Shared' },
           ].map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -96,12 +152,16 @@ function AppShell({ children }) {
               }
             >
               <Icon size={15} />
-              {label}
+              <span className="hidden sm:inline">{label}</span>
             </NavLink>
           ))}
         </div>
 
-        <UserMenu />
+        {/* Right side */}
+        <div className="ml-auto flex items-center gap-1.5">
+          <NotificationBell />
+          <UserMenu />
+        </div>
       </nav>
 
       <main className="flex-1 overflow-hidden">
@@ -114,6 +174,7 @@ function AppShell({ children }) {
           { to: '/planner', icon: CalendarDays, label: 'Plan' },
           { to: '/recipes', icon: BookOpen, label: 'Recipes' },
           { to: '/shopping', icon: ShoppingCart, label: 'Shop' },
+          { to: '/shared', icon: Calendar, label: 'Shared' },
         ].map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
@@ -136,7 +197,9 @@ function AppShell({ children }) {
 function ProtectedShell({ children }) {
   return (
     <ProtectedRoute>
-      <AppShell>{children}</AppShell>
+      <AppShell>
+        <ProfileSetupGate>{children}</ProfileSetupGate>
+      </AppShell>
     </ProtectedRoute>
   )
 }
@@ -149,14 +212,8 @@ export default function App() {
           <Route path="/" element={<Navigate to="/planner" replace />} />
           <Route path="/login" element={<Login />} />
 
-          <Route
-            path="/planner"
-            element={<ProtectedShell><Planner /></ProtectedShell>}
-          />
-          <Route
-            path="/planner/:weekStart"
-            element={<ProtectedShell><Planner /></ProtectedShell>}
-          />
+          <Route path="/planner" element={<ProtectedShell><Planner /></ProtectedShell>} />
+          <Route path="/planner/:weekStart" element={<ProtectedShell><Planner /></ProtectedShell>} />
           <Route
             path="/recipe/:id"
             element={
@@ -186,6 +243,38 @@ export default function App() {
             element={
               <ProtectedShell>
                 <div className="overflow-auto h-full"><Shopping /></div>
+              </ProtectedShell>
+            }
+          />
+          <Route
+            path="/shared"
+            element={
+              <ProtectedShell>
+                <div className="overflow-auto h-full"><Shared /></div>
+              </ProtectedShell>
+            }
+          />
+          <Route
+            path="/shared/:mealPlanId"
+            element={
+              <ProtectedShell>
+                <div className="overflow-auto h-full"><SharedCalendar /></div>
+              </ProtectedShell>
+            }
+          />
+          <Route
+            path="/people"
+            element={
+              <ProtectedShell>
+                <div className="overflow-auto h-full"><People /></div>
+              </ProtectedShell>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedShell>
+                <div className="overflow-auto h-full"><Settings_ /></div>
               </ProtectedShell>
             }
           />

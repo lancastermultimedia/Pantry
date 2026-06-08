@@ -1,13 +1,14 @@
 import { useState, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { FolderOpen, Plus, MoreHorizontal, Check, Trash2 } from 'lucide-react'
+import { FolderOpen, Plus, MoreHorizontal, Check, Trash2, Share2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFolderStore } from '../../store/folderStore'
 import { useMealPlanStore } from '../../store/mealPlanStore'
 import { useAuth } from '../../lib/auth'
 import { NewFolderModal } from './NewFolderModal'
+import { ShareFolderModal } from '../shared/ShareFolderModal'
 
-function FolderItem({ folder, recipeCount, onDrop, onRename, onDelete }) {
+function FolderItem({ folder, recipeCount, onDrop, onRename, onDelete, onShare }) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(folder.name)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -98,6 +99,12 @@ function FolderItem({ folder, recipeCount, onDrop, onRename, onDelete }) {
                   Rename
                 </button>
                 <button
+                  onClick={() => { onShare(folder); setShowMenu(false) }}
+                  className="w-full text-left px-4 py-2 text-sm text-[var(--pantry-ink)] hover:bg-[var(--pantry-cream)] flex items-center gap-2"
+                >
+                  <Share2 size={12} /> Share with…
+                </button>
+                <button
                   onClick={() => { onDelete(folder.id); setShowMenu(false) }}
                   className="w-full text-left px-4 py-2 text-sm text-[var(--pantry-accent)] hover:bg-red-50 flex items-center gap-2"
                 >
@@ -117,6 +124,7 @@ export function FolderSidebar() {
   const { allRecipes, setRecipeFolder } = useMealPlanStore()
   const { user } = useAuth()
   const [newFolderOpen, setNewFolderOpen] = useState(false)
+  const [shareFolder, setShareFolder] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
   const dragFolderRef = useRef(null)
 
@@ -206,6 +214,7 @@ export function FolderSidebar() {
               onDrop={handleDropOnFolder}
               onRename={handleRename}
               onDelete={handleDelete}
+              onShare={setShareFolder}
             />
           </div>
         ))}
@@ -224,6 +233,15 @@ export function FolderSidebar() {
         onClose={() => setNewFolderOpen(false)}
         onSave={handleCreate}
       />
+
+      <AnimatePresence>
+        {shareFolder && (
+          <ShareFolderModal
+            folder={shareFolder}
+            onClose={() => setShareFolder(null)}
+          />
+        )}
+      </AnimatePresence>
     </>
   )
 }

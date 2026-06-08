@@ -108,10 +108,13 @@ export const useSocialStore = create((set, get) => ({
 
   uploadAvatar: async (userId, file) => {
     if (!SUPABASE_CONFIGURED) return null
-    const ext = file.name.split('.').pop()
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
     const path = `${userId}/avatar.${ext}`
-    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
-    if (error) throw error
+    const { error } = await supabase.storage.from('avatars').upload(path, file, {
+      upsert: true,
+      contentType: file.type || 'image/jpeg',
+    })
+    if (error) throw new Error(`Storage: ${error.message}`)
     const { data } = supabase.storage.from('avatars').getPublicUrl(path)
     const url = data.publicUrl
     await get().upsertProfile(userId, { avatar_url: url })

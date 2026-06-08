@@ -53,7 +53,7 @@ export default function Settings() {
       let avatarUrl = null
       if (avatarFile && user?.id) {
         try { avatarUrl = await uploadAvatar(user.id, avatarFile) } catch (e) {
-          setError('Photo upload failed — check your Supabase storage bucket. Your other changes were saved.')
+          setError(`Photo upload failed: ${e.message}`)
         }
       }
       await upsertProfile(user?.id, {

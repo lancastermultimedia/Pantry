@@ -25,7 +25,9 @@ export function ProfileSetup({ userId, onComplete }) {
     setSaving(true)
     try {
       let avatarUrl = null
-      if (avatarFile) avatarUrl = await uploadAvatar(userId, avatarFile)
+      if (avatarFile) {
+        try { avatarUrl = await uploadAvatar(userId, avatarFile) } catch {}
+      }
       await upsertProfile(userId, {
         display_name: name,
         is_searchable: searchable,

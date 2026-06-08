@@ -51,7 +51,11 @@ export default function Settings() {
     setError('')
     try {
       let avatarUrl = null
-      if (avatarFile && user?.id) avatarUrl = await uploadAvatar(user.id, avatarFile)
+      if (avatarFile && user?.id) {
+        try { avatarUrl = await uploadAvatar(user.id, avatarFile) } catch (e) {
+          setError('Photo upload failed — check your Supabase storage bucket. Your other changes were saved.')
+        }
+      }
       await upsertProfile(user?.id, {
         display_name: name,
         is_searchable: searchable,

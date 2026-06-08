@@ -169,7 +169,15 @@ export default function App() {
             path="/recipes"
             element={
               <ProtectedShell>
-                <div className="overflow-auto h-full"><Recipes /></div>
+                <div className="overflow-hidden h-full"><Recipes /></div>
+              </ProtectedShell>
+            }
+          />
+          <Route
+            path="/recipes/folder/:folderId"
+            element={
+              <ProtectedShell>
+                <div className="overflow-hidden h-full"><Recipes /></div>
               </ProtectedShell>
             }
           />

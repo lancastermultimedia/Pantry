@@ -1,34 +1,95 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Heart, Clock, Users, CalendarPlus, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useMealPlanStore } from '../../store/mealPlanStore'
+import { useFolderStore } from '../../store/folderStore'
 import { SlotPickerModal } from './SlotPickerModal'
 import { RecurringModal } from './RecurringModal'
+import { RecipeContextMenu } from './RecipeContextMenu'
 
 export function RecipeCard({ recipe }) {
   const { toggleFavourite } = useMealPlanStore()
+  const { folders } = useFolderStore()
   const [slotOpen, setSlotOpen] = useState(false)
   const [recurringOpen, setRecurringOpen] = useState(false)
+  const [contextMenu, setContextMenu] = useState(null)
+  const longPressTimer = useRef(null)
+
+  const folder = recipe.folder_id ? folders.find((f) => f.id === recipe.folder_id) : null
+
+  const openContextMenu = useCallback((x, y) => {
+    setContextMenu({ x, y })
+  }, [])
+
+  function handleContextMenu(e) {
+    e.preventDefault()
+    openContextMenu(e.clientX, e.clientY)
+  }
+
+  // Long-press for mobile
+  function handlePointerDown(e) {
+    longPressTimer.current = setTimeout(() => {
+      openContextMenu(e.clientX, e.clientY)
+    }, 500)
+  }
+
+  function clearLongPress() {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
+  }
+
+  function handleDragStart(e) {
+    e.dataTransfer.setData('recipe-id', recipe.id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
 
   return (
     <>
-      <div className="rounded-2xl border border-[var(--pantry-border)] bg-white overflow-hidden group hover:shadow-md transition-shadow flex flex-col">
-        <Link to={`/recipe/${recipe.id}`} className="block relative h-40 overflow-hidden">
+      <div
+        className="rounded-2xl border border-[var(--pantry-border)] bg-white overflow-hidden group hover:shadow-md transition-shadow flex flex-col cursor-grab active:cursor-grabbing select-none"
+        draggable
+        onDragStart={handleDragStart}
+        onContextMenu={handleContextMenu}
+        onPointerDown={handlePointerDown}
+        onPointerUp={clearLongPress}
+        onPointerCancel={clearLongPress}
+        onPointerMove={clearLongPress}
+      >
+        <Link to={`/recipe/${recipe.id}`} className="block relative h-40 overflow-hidden" draggable={false}>
           {recipe.image_url ? (
-            <img src={recipe.image_url} alt={recipe.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <img
+              src={recipe.image_url}
+              alt={recipe.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              draggable={false}
+            />
           ) : (
             <div className="w-full h-full bg-[var(--pantry-border)]" />
           )}
+
+          {/* Folder badge */}
+          {folder && (
+            <span
+              className="absolute top-2 left-2 text-[10px] font-semibold text-white px-2 py-0.5 rounded-full"
+              style={{ background: folder.color }}
+            >
+              {folder.name}
+            </span>
+          )}
+
+          {/* Recurring badge */}
           {recipe.is_recurring && (
-            <span className="absolute top-2 left-2 flex items-center gap-1 bg-[var(--pantry-green)] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+            <span className="absolute top-2 right-2 flex items-center gap-1 bg-[var(--pantry-green)] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
               <RefreshCw size={9} /> Weekly
             </span>
           )}
         </Link>
 
         <div className="p-4 flex flex-col flex-1">
-          <Link to={`/recipe/${recipe.id}`} className="block mb-2">
-            <h3 className="font-semibold text-[var(--pantry-ink)] leading-snug line-clamp-2" style={{ fontFamily: 'Playfair Display, Georgia, serif' }}>
+          <Link to={`/recipe/${recipe.id}`} className="block mb-2" draggable={false}>
+            <h3
+              className="font-semibold text-[var(--pantry-ink)] leading-snug line-clamp-2"
+              style={{ fontFamily: 'Playfair Display, Georgia, serif' }}
+            >
               {recipe.title}
             </h3>
           </Link>
@@ -79,6 +140,13 @@ export function RecipeCard({ recipe }) {
 
       <SlotPickerModal isOpen={slotOpen} onClose={() => setSlotOpen(false)} recipe={recipe} />
       <RecurringModal isOpen={recurringOpen} onClose={() => setRecurringOpen(false)} recipe={recipe} />
+      {contextMenu && (
+        <RecipeContextMenu
+          recipe={recipe}
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </>
   )
 }

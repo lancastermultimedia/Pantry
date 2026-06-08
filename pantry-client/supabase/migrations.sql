@@ -54,6 +54,28 @@ create policy "recipe: owner access" on recipe
 create policy "meal_plan: owner access" on meal_plan
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- ──────────────────────────────────────────────────
+-- Phase 7: Folders
+-- Run this block separately if Phase 1 schema already exists
+-- ──────────────────────────────────────────────────
+
+create table if not exists folders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade not null,
+  name text not null,
+  color text not null default '#2D5016',
+  created_at timestamptz not null default now()
+);
+
+alter table recipe add column if not exists folder_id uuid references folders(id) on delete set null;
+
+alter table folders enable row level security;
+
+create policy "folders: owner access" on folders
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────
+
 -- meal_slot: accessible if the parent meal_plan belongs to the user
 create policy "meal_slot: owner access" on meal_slot
   for all

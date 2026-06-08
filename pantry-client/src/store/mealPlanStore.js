@@ -292,6 +292,36 @@ export const useMealPlanStore = create((set, get) => ({
     }))
   },
 
+  setRecipeFolder: async (recipeId, folderId) => {
+    const recipe = get().allRecipes[recipeId] || get().recipes[recipeId]
+    if (!recipe) return
+    if (SUPABASE_CONFIGURED) {
+      await supabase.from('recipe').update({ folder_id: folderId ?? null }).eq('id', recipeId)
+    }
+    const updated = { ...recipe, folder_id: folderId ?? null }
+    set((s) => ({
+      recipes: { ...s.recipes, [recipeId]: updated },
+      allRecipes: { ...s.allRecipes, [recipeId]: updated },
+    }))
+  },
+
+  deleteRecipe: async (recipeId) => {
+    if (SUPABASE_CONFIGURED) {
+      await supabase.from('recipe').delete().eq('id', recipeId)
+    }
+    set((s) => {
+      const recipes = { ...s.recipes }
+      const allRecipes = { ...s.allRecipes }
+      delete recipes[recipeId]
+      delete allRecipes[recipeId]
+      return {
+        recipes,
+        allRecipes,
+        mealSlots: s.mealSlots.filter((sl) => sl.recipe_id !== recipeId),
+      }
+    })
+  },
+
   setRecurring: async (recipeId, isRecurring, recurrenceRule) => {
     const recipe = get().allRecipes[recipeId] || get().recipes[recipeId]
     if (!recipe) return

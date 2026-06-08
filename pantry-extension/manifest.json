@@ -3,7 +3,7 @@
   "name": "Pantry",
   "version": "1.0.0",
   "description": "Save recipes to your Pantry from anywhere on the web",
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_popup": "popup/popup.html",

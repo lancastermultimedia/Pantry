@@ -79,4 +79,60 @@
       recipe: normalizeRecipe(schema),
     }).catch(() => {})
   }
+
+  // ── Pantry session relay ─────────────────────────────────────────────────────
+  // When running on the Pantry web app, extract the Supabase session from
+  // localStorage and send it to the background so the extension stays logged in.
+  const PANTRY_HOSTS = new Set(['pantry-sigma-green.vercel.app', 'localhost', '127.0.0.1'])
+  if (PANTRY_HOSTS.has(location.hostname)) {
+    function extractSession() {
+      try {
+        const key = Object.keys(localStorage).find(
+          (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
+        )
+        if (!key) return null
+        const data = JSON.parse(localStorage.getItem(key))
+        const s = data?.currentSession ?? data
+        if (s?.access_token && s?.refresh_token) {
+          return {
+            access_token: s.access_token,
+            refresh_token: s.refresh_token,
+            user_id: s.user?.id ?? null,
+            email: s.user?.email ?? null,
+          }
+        }
+      } catch {}
+      return null
+    }
+
+    function trySendSession() {
+      const session = extractSession()
+      if (session) {
+        chrome.runtime.sendMessage({ type: 'PANTRY_SESSION_FOUND', session }).catch(() => {})
+      }
+    }
+
+    // Send immediately — covers the case where the user is already logged in
+    trySendSession()
+
+    // Poll for up to 10s — covers the magic link redirect case where Supabase
+    // processes the token asynchronously after page load
+    let attempts = 0
+    const poll = setInterval(() => {
+      if (++attempts >= 20) { clearInterval(poll); return }
+      const session = extractSession()
+      if (session) {
+        chrome.runtime.sendMessage({ type: 'PANTRY_SESSION_FOUND', session }).catch(() => {})
+        clearInterval(poll)
+      }
+    }, 500)
+
+    // Respond to direct requests from the popup (via background)
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (msg.type === 'GET_SUPABASE_SESSION') {
+        sendResponse({ session: extractSession() })
+        return true
+      }
+    })
+  }
 })()

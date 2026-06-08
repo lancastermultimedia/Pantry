@@ -31,7 +31,9 @@ export function createApi({ SUPABASE_URL, SUPABASE_ANON_KEY, API_URL }) {
       throw new Error(text || `HTTP ${res.status}`)
     }
     if (res.status === 204) return null
-    return res.json()
+    const text = await res.text()
+    if (!text) return null
+    return JSON.parse(text)
   }
 
   return {

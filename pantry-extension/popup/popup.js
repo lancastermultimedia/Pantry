@@ -11,7 +11,7 @@ if (!config?.SUPABASE_URL) {
   throw new Error('Missing PANTRY_CONFIG')
 }
 const api = createApi(config)
-const PANTRY_APP = 'https://pantryapp.vercel.app'
+const PANTRY_APP = 'https://pantry-sigma-green.vercel.app'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function el(id) { return document.getElementById(id) }
@@ -44,7 +44,7 @@ function dayName(i) { return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i] }
 function fullDayName(i) { return ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][i] }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-const VIEWS = { LOADING: 'loading', LOGIN: 'login', VERIFY: 'verify',
+const VIEWS = { LOADING: 'loading', LOGIN: 'login', WAITING: 'waiting',
   MAIN_RECIPE: 'main-recipe', MAIN_NO_RECIPE: 'main-no-recipe', SUCCESS: 'success' }
 
 let state = {
@@ -119,6 +119,15 @@ async function restoreSession() {
   } catch { return null }
 }
 
+async function tryGetSessionFromPantryTab() {
+  return new Promise(resolve => {
+    chrome.runtime.sendMessage({ type: 'GET_SESSION_FROM_PANTRY' }, (res) => {
+      if (chrome.runtime.lastError) resolve(null)
+      else resolve(res?.session ?? null)
+    })
+  })
+}
+
 // ── Data loading ──────────────────────────────────────────────────────────────
 async function loadUserData(session) {
   const [profile, folders] = await Promise.all([
@@ -139,7 +148,14 @@ async function loadSharedCalendars(session) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   render()
-  const session = await restoreSession()
+
+  // Try stored/refreshed session first, then fall back to reading from a Pantry tab
+  let session = await restoreSession()
+  if (!session) {
+    session = await tryGetSessionFromPantryTab()
+    if (session) await saveSession(session)
+  }
+
   const tab = await getCurrentTab()
   state.tabUrl = tab?.url ?? ''
 
@@ -165,7 +181,7 @@ function render() {
   switch (state.view) {
     case VIEWS.LOADING:    root.innerHTML = renderLoading(); break
     case VIEWS.LOGIN:      root.innerHTML = renderLogin(); break
-    case VIEWS.VERIFY:     root.innerHTML = renderVerify(); break
+    case VIEWS.WAITING:    root.innerHTML = renderWaiting(); break
     case VIEWS.MAIN_RECIPE:     root.innerHTML = renderMain(true); break
     case VIEWS.MAIN_NO_RECIPE:  root.innerHTML = renderMain(false); break
     case VIEWS.SUCCESS:    root.innerHTML = renderSuccess(); break
@@ -187,41 +203,42 @@ function renderLoading() {
 function renderLogin() {
   return `
     ${renderHeader(false)}
-    <div class="section" style="padding-top:20px; padding-bottom:20px;">
-      <h1 style="margin-bottom:4px;">Sign in to Pantry</h1>
-      <p class="muted" style="margin-bottom:16px; font-size:12px;">
-        Enter your email — we'll send a 6-digit code.
+    <div class="section" style="padding-top:24px; padding-bottom:24px; text-align:center;">
+      <div style="font-size:32px; margin-bottom:12px;">🌿</div>
+      <h1 style="margin-bottom:6px;">Sign in to Pantry</h1>
+      <p class="muted" style="font-size:12px; margin-bottom:20px; line-height:1.6;">
+        Open the Pantry web app to sign in — the extension will pick up your session automatically.
       </p>
-      <div style="margin-bottom:10px;">
-        <label class="label">Email</label>
-        <input id="login-email" type="email" placeholder="you@example.com" value="${state.email}" />
-      </div>
-      ${state.error ? `<p class="error-text">${state.error}</p>` : ''}
-      <button class="btn btn-primary" id="btn-send-code" style="margin-top:12px;">
-        Send code →
+      ${state.error ? `<p class="error-text" style="margin-bottom:10px;">${state.error}</p>` : ''}
+      <button class="btn btn-primary" id="btn-open-pantry">
+        Open Pantry to sign in →
       </button>
+      <div style="margin-top:12px;">
+        <button class="btn-link" id="btn-already-signed-in" style="font-size:11px; color:#8C8478;">
+          Already signed in? Check now
+        </button>
+      </div>
     </div>`
 }
 
-function renderVerify() {
+function renderWaiting() {
   return `
     ${renderHeader(false)}
-    <div class="section" style="padding-top:20px; padding-bottom:20px;">
-      <h1 style="margin-bottom:4px;">Check your email</h1>
-      <p class="muted" style="margin-bottom:16px; font-size:12px;">
-        We sent a 6-digit code to <strong>${state.email}</strong>
+    <div class="section" style="padding-top:24px; padding-bottom:24px; text-align:center;">
+      <div style="font-size:32px; margin-bottom:12px;">✉️</div>
+      <h1 style="margin-bottom:6px;">Check your email</h1>
+      <p class="muted" style="font-size:12px; margin-bottom:4px; line-height:1.6;">
+        Enter your email on Pantry and click the sign-in link we send you.
       </p>
-      <div style="margin-bottom:10px;">
-        <label class="label">Code</label>
-        <input id="verify-code" type="text" placeholder="123456" maxlength="6"
-          style="letter-spacing:0.2em; font-size:18px; text-align:center;" />
-      </div>
-      ${state.error ? `<p class="error-text">${state.error}</p>` : ''}
-      <button class="btn btn-primary" id="btn-verify" style="margin-top:12px;">Verify</button>
-      <div style="text-align:center; margin-top:10px;">
-        <button class="btn-link" id="btn-resend">Send again</button>
-        &nbsp;·&nbsp;
-        <button class="btn-link" id="btn-back-login">Change email</button>
+      <p class="muted" style="font-size:12px; margin-bottom:20px; line-height:1.6;">
+        Once you've clicked the link, tap below:
+      </p>
+      ${state.error ? `<p class="error-text" style="margin-bottom:10px;">${state.error}</p>` : ''}
+      <button class="btn btn-primary" id="btn-check-session">
+        I've signed in →
+      </button>
+      <div style="margin-top:12px;">
+        <button class="btn-link" id="btn-back-login" style="font-size:11px; color:#8C8478;">← Back</button>
       </div>
     </div>`
 }
@@ -409,26 +426,14 @@ function renderSuccess() {
 // ── Event handlers ────────────────────────────────────────────────────────────
 function attachHandlers() {
   // Login
-  const btnSend = document.getElementById('btn-send-code')
-  if (btnSend) {
-    btnSend.addEventListener('click', handleSendCode)
-    document.getElementById('login-email')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleSendCode()
-    })
-  }
+  document.getElementById('btn-open-pantry')?.addEventListener('click', handleOpenPantry)
+  document.getElementById('btn-already-signed-in')?.addEventListener('click', handleCheckSession)
 
-  // Verify
-  const btnVerify = document.getElementById('btn-verify')
-  if (btnVerify) {
-    btnVerify.addEventListener('click', handleVerify)
-    document.getElementById('verify-code')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleVerify()
-    })
-    document.getElementById('btn-resend')?.addEventListener('click', handleResend)
-    document.getElementById('btn-back-login')?.addEventListener('click', () => {
-      state.view = VIEWS.LOGIN; state.error = ''; render()
-    })
-  }
+  // Waiting
+  document.getElementById('btn-check-session')?.addEventListener('click', handleCheckSession)
+  document.getElementById('btn-back-login')?.addEventListener('click', () => {
+    state.view = VIEWS.LOGIN; state.error = ''; render()
+  })
 
   // Sign out
   document.getElementById('btn-signout')?.addEventListener('click', handleSignOut)
@@ -508,56 +513,32 @@ function updateSearchResults() {
 }
 
 // ── Action handlers ───────────────────────────────────────────────────────────
-async function handleSendCode() {
-  const input = document.getElementById('login-email')
-  const email = input?.value.trim()
-  if (!email) { state.error = 'Please enter your email.'; render(); return }
-  state.email = email
+async function handleOpenPantry() {
   state.error = ''
-  const btn = document.getElementById('btn-send-code')
-  if (btn) { btn.disabled = true; btn.textContent = 'Sending…' }
-  try {
-    await api.sendOtp(email)
-    state.view = VIEWS.VERIFY
-    render()
-  } catch (e) {
-    state.error = e.message || 'Failed to send code.'
-    render()
-  }
+  await chrome.tabs.create({ url: PANTRY_APP + '/login' })
+  state.view = VIEWS.WAITING
+  render()
 }
 
-async function handleVerify() {
-  const code = document.getElementById('verify-code')?.value.trim()
-  if (!code || code.length < 6) { state.error = 'Enter the 6-digit code from your email.'; render(); return }
-  const btn = document.getElementById('btn-verify')
-  if (btn) { btn.disabled = true; btn.textContent = 'Verifying…' }
+async function handleCheckSession() {
+  const btn = document.getElementById('btn-check-session') ?? document.getElementById('btn-already-signed-in')
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking…' }
   state.error = ''
-  try {
-    const data = await api.verifyOtp(state.email, code)
-    const session = {
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      user_id: data.user.id,
-      email: data.user.email,
-    }
-    await saveSession(session)
-    state.session = session
-    state.view = VIEWS.LOADING
-    render()
-    await init()
-  } catch (e) {
-    state.error = e.message || 'Invalid code. Please try again.'
-    render()
-  }
-}
 
-async function handleResend() {
-  try {
-    await api.sendOtp(state.email)
-    state.error = ''
-    const btn = document.getElementById('btn-resend')
-    if (btn) { btn.textContent = 'Sent!'; setTimeout(() => { btn.textContent = 'Send again' }, 2000) }
-  } catch {}
+  let session = await restoreSession()
+  if (!session) session = await tryGetSessionFromPantryTab()
+
+  if (!session) {
+    state.error = "Not signed in yet — click the link in your email first, then try again."
+    render()
+    return
+  }
+
+  await saveSession(session)
+  state.session = session
+  state.view = VIEWS.LOADING
+  render()
+  await init()
 }
 
 async function handleSignOut() {

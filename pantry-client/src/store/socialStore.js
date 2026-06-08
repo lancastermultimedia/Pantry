@@ -145,29 +145,40 @@ export const useSocialStore = create((set, get) => ({
 
   loadConnections: async (userId) => {
     if (!SUPABASE_CONFIGURED) return
-    const { data = [] } = await supabase
+
+    // Step 1: fetch the request rows (no FK join — profiles has no direct FK from this table)
+    const { data: requests = [], error: reqErr } = await supabase
       .from('shared_pantry_requests')
-      .select(`
-        id, requester_id, addressee_id, status, created_at,
-        requester:profiles!requester_id(id, display_name, email, avatar_url),
-        addressee:profiles!addressee_id(id, display_name, email, avatar_url)
-      `)
+      .select('id, requester_id, addressee_id, status, created_at')
       .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
 
-    const accepted = data
-      .filter((r) => r.status === 'accepted')
-      .map((r) => ({
-        ...r,
-        other_user: r.requester_id === userId ? r.addressee : r.requester,
-      }))
+    if (reqErr) { console.error('loadConnections:', reqErr.message); return }
+    if (!requests.length) {
+      set({ connections: [], pendingIncoming: [], pendingOutgoing: [] })
+      return
+    }
 
-    const incoming = data.filter((r) => r.status === 'pending' && r.addressee_id === userId)
-      .map((r) => ({ ...r, other_user: r.requester }))
+    // Step 2: fetch profiles for everyone involved
+    const otherIds = [...new Set(
+      requests.map((r) => r.requester_id === userId ? r.addressee_id : r.requester_id)
+    )]
+    const { data: profiles = [] } = await supabase
+      .from('profiles')
+      .select('id, display_name, email, avatar_url')
+      .in('id', otherIds)
 
-    const outgoing = data.filter((r) => r.status === 'pending' && r.requester_id === userId)
-      .map((r) => ({ ...r, other_user: r.addressee }))
+    const profileMap = Object.fromEntries(profiles.map((p) => [p.id, p]))
 
-    set({ connections: accepted, pendingIncoming: incoming, pendingOutgoing: outgoing })
+    const withUsers = requests.map((r) => ({
+      ...r,
+      other_user: profileMap[r.requester_id === userId ? r.addressee_id : r.requester_id] ?? null,
+    }))
+
+    set({
+      connections:      withUsers.filter((r) => r.status === 'accepted'),
+      pendingIncoming:  withUsers.filter((r) => r.status === 'pending' && r.addressee_id === userId),
+      pendingOutgoing:  withUsers.filter((r) => r.status === 'pending' && r.requester_id === userId),
+    })
   },
 
   sendPantryRequest: async (userId, addresseeId) => {

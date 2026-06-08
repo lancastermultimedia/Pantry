@@ -82,8 +82,12 @@ export const useSocialStore = create((set, get) => ({
   loadProfile: async (userId) => {
     if (!SUPABASE_CONFIGURED) return
     set({ profileLoading: true })
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    set({ profile: data ?? null, profileLoading: false })
+    try {
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      set({ profile: data ?? null, profileLoading: false })
+    } catch {
+      set({ profileLoading: false })
+    }
   },
 
   upsertProfile: async (userId, updates) => {

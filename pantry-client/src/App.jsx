@@ -97,16 +97,16 @@ function ProfileSetupGate({ children }) {
   useEffect(() => {
     async function check() {
       if (user?.id && isConfigured) {
-        await loadProfile(user.id)
+        try { await loadProfile(user.id) } catch {}
       }
       setChecked(true)
     }
     check()
   }, [user?.id])
 
-  if (!checked || profileLoading) return null
+  if (!checked) return null
 
-  if (isConfigured && user && profile && !profile.display_name) {
+  if (isConfigured && user && (!profile || !profile.display_name)) {
     return <ProfileSetup userId={user.id} onComplete={() => loadProfile(user.id)} />
   }
 

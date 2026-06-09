@@ -56,15 +56,21 @@ export const useSharedCalendarStore = create((set, get) => ({
 
     const roleMap = Object.fromEntries(memberships.map((m) => [m.meal_plan_id, m.role]))
 
-    const { data: allMembers = [] } = await supabase
+    const { data: allMemberRows = [] } = await supabase
       .from('meal_plan_members')
-      .select('meal_plan_id, user_id, role, profiles(display_name, avatar_url)')
+      .select('meal_plan_id, user_id, role')
       .in('meal_plan_id', planIds)
 
+    const memberUserIds = [...new Set(allMemberRows.map((m) => m.user_id))]
+    const { data: memberProfiles = [] } = memberUserIds.length
+      ? await supabase.from('profiles').select('id, display_name, avatar_url').in('id', memberUserIds)
+      : { data: [] }
+    const profileMap = Object.fromEntries(memberProfiles.map((p) => [p.id, p]))
+
     const membersByPlan = {}
-    for (const m of allMembers) {
+    for (const m of allMemberRows) {
       if (!membersByPlan[m.meal_plan_id]) membersByPlan[m.meal_plan_id] = []
-      membersByPlan[m.meal_plan_id].push({ ...m.profiles, user_id: m.user_id, role: m.role })
+      membersByPlan[m.meal_plan_id].push({ ...profileMap[m.user_id], user_id: m.user_id, role: m.role })
     }
 
     const calendars = plans.map((p) => ({
@@ -107,13 +113,19 @@ export const useSharedCalendarStore = create((set, get) => ({
       recipesMap = Object.fromEntries(recipes.map((r) => [r.id, r]))
     }
 
-    const { data: members = [] } = await supabase
+    const { data: memberRows = [] } = await supabase
       .from('meal_plan_members')
-      .select('user_id, role, profiles(display_name, avatar_url)')
+      .select('user_id, role')
       .eq('meal_plan_id', planId)
 
-    const membersWithProfiles = members.map((m) => ({
-      ...m.profiles,
+    const calMemberIds = [...new Set(memberRows.map((m) => m.user_id))]
+    const { data: calProfiles = [] } = calMemberIds.length
+      ? await supabase.from('profiles').select('id, display_name, avatar_url').in('id', calMemberIds)
+      : { data: [] }
+    const calProfileMap = Object.fromEntries(calProfiles.map((p) => [p.id, p]))
+
+    const membersWithProfiles = memberRows.map((m) => ({
+      ...calProfileMap[m.user_id],
       user_id: m.user_id,
       role: m.role,
     }))
